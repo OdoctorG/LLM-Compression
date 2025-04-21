@@ -10,7 +10,7 @@ class LlamaModel(ProbabilityModel):
         self.llm = Llama(
             model_path=model_path,
             n_ctx=max_context,
-            logits_all=False,
+            logits_all=True,
             n_gpu_layers=0,
             verbose=False,
         )

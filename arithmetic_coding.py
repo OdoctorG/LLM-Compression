@@ -156,11 +156,11 @@ if __name__ == "__main__":
     
     print("LLM TEST")
 
-    model = LlamaModel(0.99, max_context=50)
+    model = LlamaModel(top_p=0.99, max_context=50)
     wiki_str = "Weissman var på 1920-talet en av Finlands mest kända kuplettsångare och var en mycket aktiv skådespelare med både operetter och lustspel på sin repertoar. Hans skådespelarkarriär inleddes omkring 1913 och varade fram till 1930-talet. Under den tiden var han verksam vid flera teatrar och skådespelarensembler. Som kuplettsångare uppträdde han på biografer, kaféer och restauranger runt om i landet. På 1910- och 1920-talen gjorde han en stor mängd skivinspelningar och var en aktiv sångare under grammofonfebern 1929. När kuplettgenren gick ur mode på slutet av 1920-talet försökte Weissman anpassa sig till schlagermusiken, men övergav inom kort den konstnärliga banan för att ägna sig åt reklamverksamhet och diverse affärer"
     wiki_str_short = "Weissman var på 1920-talet en av Finlands mest kända kuplettsångare och var en mycket aktiv skådespelare med både operetter och lustspel på sin repertoar."
     wiki_str_short2 = "The building began as a movie theater in 1973, was converted into the Jet Set nightclub in 1994, and underwent renovations in 2010 and 2015"
-    prompt = wiki_str.encode('utf-8')
+    prompt = wiki_str_short2.encode('utf-8')
     prompt_tkn = np.asarray(model.tokenize(prompt))
     print(len(prompt_tkn), " symbols")
     encoded_bin = encode(prompt_tkn, model)
