@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llm-compression"
-version = "0.1.0"
+version = "0.1.1"
 description = "Arithmetic compression using Llama LLM models"
 authors = ["OdoctorG <grenoscar@gmail.com>"]
 license = "GPL3"
