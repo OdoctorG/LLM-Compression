@@ -8,7 +8,7 @@ To use the LLM model for compression you need to install ```llama-cpp-python``` 
 First install [llama-cpp-python](https://github.com/abetlen/llama-cpp-python), using the instructions on github. Then install this package with ```pip install llm-compression```. For information on how to use the package see the example below.
 
 ## Example 
-```
+```python
 from llm_compression import LlamaModel, encode, decode
 import numpy as np
 
