@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-from probability_model import ProbabilityModel
+from .probability_model import ProbabilityModel
 
 
 def encode(input_arr: np.ndarray, model: ProbabilityModel) -> list[int]:

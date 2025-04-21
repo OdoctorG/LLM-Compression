@@ -2,7 +2,7 @@ from llama_cpp import Llama
 import numpy as np
 import time
 
-from probability_model import ProbabilityModel
+from .probability_model import ProbabilityModel
 
 
 class LlamaModel(ProbabilityModel):
@@ -20,8 +20,8 @@ class LlamaModel(ProbabilityModel):
         model_path : str
             File path to the LLaMA model .gguf file.
         top_p : float, optional
-            The top [0, 1] percentage of the most likely tokens to consider when computing the probability distribution.
-            Higher values will generally result in better compression for sequences that the LLM can easily predict.
+            The top [0, 1] percentage of the most likely tokens to consider when computing the probability distribution. 
+            Higher values will generally result in better compression for sequences that the LLM can easily predict.  
         max_context : int, optional
             The maximum number of tokens to keep in the model's context. Higher values will generally lead to better compression but slower performance.
 
@@ -58,14 +58,14 @@ class LlamaModel(ProbabilityModel):
         Parameters
         ----------
         prior_symbols : np.ndarray[int]
-            The sequence of prior tokens.
+            The sequence of prior tokens. 
 
         Returns
         -------
         (tokens, cdfs)
             tokens : np.ndarray[int]
                 The symbols in descending order of probability.
-            cdfs : np.ndarray[float]
+            cdfs : np.ndarray[float]  
                 The cumulative probabilities of the tokens in the same order.
         """
         print(f"Prior symbols: {len(prior_symbols)}")
@@ -148,7 +148,7 @@ class LlamaModel(ProbabilityModel):
         return (tokens, cdfs)
 
     def reset(self) -> None:
-        """Clear cache and reset LLM. Needed when starting a new compression/decrompression"""
+        """ Clear cache and reset LLM. Needed when starting a new compression/decrompression """
         self.cache = []
         self.llm.reset()
 
@@ -172,4 +172,20 @@ class LlamaModel(ProbabilityModel):
         return self.llm.tokenize(text, add_bos=False)
 
     def detokenize(self, tokens: list[int]) -> bytes:
+        """
+        Convert a sequence of token IDs back into a string of bytes.
+
+        This function is a wrapper around Llama's `detokenize` method.
+
+        Parameters
+        ----------
+        tokens : list[int]
+            A list of token IDs to be converted back into bytes.
+
+        Returns
+        -------
+        bytes
+            The original string of bytes.
+        """
+
         return self.llm.detokenize(tokens)
