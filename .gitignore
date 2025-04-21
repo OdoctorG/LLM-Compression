@@ -1,0 +1,7 @@
+**__pycahce__/
+.python-version
+poetry.lock
+install.ps1
+Llama-3.2-1B-Instruct-Q4_K_M.gguf
+mistral-7b-instruct-v0.2.Q5_K_M.gguf
+dist
