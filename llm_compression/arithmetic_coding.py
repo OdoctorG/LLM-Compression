@@ -3,12 +3,24 @@ import math
 
 from probability_model import ProbabilityModel
 
-def encode(input_arr: np.ndarray, model: ProbabilityModel):
+
+def encode(input_arr: np.ndarray, model: ProbabilityModel) -> list[int]:
+    """
+    Encodes an input array of symbols into a list of bits using arithmetic coding.
+
+    Args:
+        input_arr (np.ndarray): An array of input symbols to encode.
+        model (ProbabilityModel): The probability model used to get the symbol probabilities.
+
+    Returns:
+        list[int]: A list of bits representing the encoded input symbols.
+    """
+
     BIT_PRECISION = 64
     MAX = (1 << BIT_PRECISION) - 1
     HALF = 1 << (BIT_PRECISION - 1)
     QUARTER = 1 << (BIT_PRECISION - 2)
-    
+
     low = 0
     high = MAX
     output = []
@@ -17,18 +29,18 @@ def encode(input_arr: np.ndarray, model: ProbabilityModel):
 
     for symbol in input_arr:
         symbols, cdfs = model.get_prob(input_arr[:k])
-        
-        symbol_idx = np.where(symbols == symbol)[0] #symbols.index(symbol)
+
+        symbol_idx = np.where(symbols == symbol)[0]  # symbols.index(symbol)
 
         # Calculate probability bounds using floating-point CDFs
-        cdf_low = cdfs[symbol_idx-1][0] if symbol_idx > 0 else 0.0
+        cdf_low = cdfs[symbol_idx - 1][0] if symbol_idx > 0 else 0.0
         cdf_high = cdfs[symbol_idx][0]
-        
+
         # Convert to integer ranges with careful rounding
         range_size = high - low + 1
         new_low = low + math.floor(cdf_low * range_size)
         new_high = low + math.ceil(cdf_high * range_size) - 1
-        
+
         low, high = new_low, new_high
 
         # Interval scaling and bit emission
@@ -64,7 +76,22 @@ def encode(input_arr: np.ndarray, model: ProbabilityModel):
 
     return output
 
-def decode(encoded_bits: np.ndarray, model: ProbabilityModel, num_symbols: int):
+
+def decode(
+    encoded_bits: np.ndarray, model: ProbabilityModel, num_symbols: int
+) -> np.ndarray:
+    """
+    Decodes a list of encoded bits into an array of symbols using arithmetic decoding.
+
+    Args:
+        encoded_bits (np.ndarray): Numpy array of bits representing the encoded input symbols.
+        model (ProbabilityModel): The probability model used to get the symbol probabilities.
+        num_symbols (int): The number of symbols in encoded in the input array.
+
+    Returns:
+        np.ndarray: Array of decoded symbols.
+    """
+
     import math
     import bisect
 
@@ -135,16 +162,16 @@ def decode(encoded_bits: np.ndarray, model: ProbabilityModel, num_symbols: int):
 
     return decoded
 
+
 # Testing
 if __name__ == "__main__":
     from llama_model import LlamaModel
     from probability_model import StaticModel
 
-
-    model = StaticModel(3, ['a', 'b', 'c'], [0.4, 0.3, 0.3])
+    model = StaticModel(3, ["a", "b", "c"], [0.4, 0.3, 0.3])
     test_str = "abcabc"
     print(len(test_str), " symbols")
-    
+
     test_arr = np.asarray([test_str[i] for i in range(len(test_str))])
     print(test_arr)
     encoded_bin = encode(test_arr, model)
@@ -153,18 +180,20 @@ if __name__ == "__main__":
 
     decoded = decode(encoded_bin, model, len(test_arr))
     print(decoded)
-    
+
     print("LLM TEST")
 
-    model = LlamaModel(top_p=0.99, max_context=50)
+    model = LlamaModel(
+        model_path="../Llama-3.2-1B-Instruct-Q4_K_M.gguf", top_p=0.99, max_context=50
+    )
     wiki_str = "Weissman var på 1920-talet en av Finlands mest kända kuplettsångare och var en mycket aktiv skådespelare med både operetter och lustspel på sin repertoar. Hans skådespelarkarriär inleddes omkring 1913 och varade fram till 1930-talet. Under den tiden var han verksam vid flera teatrar och skådespelarensembler. Som kuplettsångare uppträdde han på biografer, kaféer och restauranger runt om i landet. På 1910- och 1920-talen gjorde han en stor mängd skivinspelningar och var en aktiv sångare under grammofonfebern 1929. När kuplettgenren gick ur mode på slutet av 1920-talet försökte Weissman anpassa sig till schlagermusiken, men övergav inom kort den konstnärliga banan för att ägna sig åt reklamverksamhet och diverse affärer"
     wiki_str_short = "Weissman var på 1920-talet en av Finlands mest kända kuplettsångare och var en mycket aktiv skådespelare med både operetter och lustspel på sin repertoar."
     wiki_str_short2 = "The building began as a movie theater in 1973, was converted into the Jet Set nightclub in 1994, and underwent renovations in 2010 and 2015"
-    prompt = wiki_str_short2.encode('utf-8')
+    prompt = wiki_str_short2.encode("utf-8")
     prompt_tkn = np.asarray(model.tokenize(prompt))
     print(len(prompt_tkn), " symbols")
     encoded_bin = encode(prompt_tkn, model)
     print(len(encoded_bin), " bits in encoding")
     decoded = decode(encoded_bin, model, len(prompt_tkn))
     outstr = model.detokenize(decoded)
-    print(outstr.decode('utf-8'))
+    print(outstr.decode("utf-8"))

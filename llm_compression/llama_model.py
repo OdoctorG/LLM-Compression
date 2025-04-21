@@ -4,8 +4,33 @@ import time
 
 from probability_model import ProbabilityModel
 
+
 class LlamaModel(ProbabilityModel):
-    def __init__(self, model_path: str = "Llama-3.2-1B-Instruct-Q4_K_M.gguf", top_p: float = 0.99, max_context: int = 50):
+    def __init__(
+        self,
+        model_path: str,
+        top_p: float = 0.99,
+        max_context: int = 50,
+    ):
+        """
+        Initialize a LlamaModel.
+
+        Parameters
+        ----------
+        model_path : str
+            File path to the LLaMA model .gguf file.
+        top_p : float, optional
+            The top [0, 1] percentage of the most likely tokens to consider when computing the probability distribution.
+            Higher values will generally result in better compression for sequences that the LLM can easily predict.
+        max_context : int, optional
+            The maximum number of tokens to keep in the model's context. Higher values will generally lead to better compression but slower performance.
+
+        Raises
+        ------
+        ValueError
+            If the provided max_context is too large for the model.
+        """
+
         t1 = time.perf_counter()
         self.llm = Llama(
             model_path=model_path,
@@ -15,7 +40,9 @@ class LlamaModel(ProbabilityModel):
             verbose=False,
         )
         if self.llm.n_ctx() < max_context:
-            raise ValueError(f"Provided max_context is too large for the model. Provided max_context is {max_context}, but model max context is {self.llm.n_ctx}")
+            raise ValueError(
+                f"Provided max_context is too large for the model. Provided max_context is {max_context}, but model max context is {self.llm.n_ctx}"
+            )
         t2 = time.perf_counter()
         print(f"Model loaded in {t2 - t1} seconds")
         self.N = self.llm.n_vocab()
@@ -25,9 +52,24 @@ class LlamaModel(ProbabilityModel):
         super().__init__(self.N)
 
     def get_prob(self, prior_symbols: np.ndarray[int]) -> tuple[np.ndarray, np.ndarray]:
-        
+        """
+        Get cumalitive probability distribution of the next token given the prior tokens.
+
+        Parameters
+        ----------
+        prior_symbols : np.ndarray[int]
+            The sequence of prior tokens.
+
+        Returns
+        -------
+        (tokens, cdfs)
+            tokens : np.ndarray[int]
+                The symbols in descending order of probability.
+            cdfs : np.ndarray[float]
+                The cumulative probabilities of the tokens in the same order.
+        """
         print(f"Prior symbols: {len(prior_symbols)}")
-        
+
         # If no prior tokens, return uniform distribution and clear cache
         if len(prior_symbols) == 0:
             self.reset()
@@ -40,16 +82,16 @@ class LlamaModel(ProbabilityModel):
                 tokens[token_id] = token_id
                 cdfs[token_id] = cumulative
             return tokens, cdfs
-        
+
         # If there are more symbols cached than context, clear oldest half of cache
         if len(self.cache) >= self.max_context:
-            #self.reset()
-            self.cache = self.cache[self.max_context // 2:]
+            # self.reset()
+            self.cache = self.cache[self.max_context // 2 :]
             self.llm.reset()
             # evaluate what is left of cache
             self.llm.eval(self.cache)
             print("Cache cleared")
-        
+
         # Evaluate latest token
         t1 = time.perf_counter()
         self.llm.eval([prior_symbols[-1]])
@@ -62,12 +104,12 @@ class LlamaModel(ProbabilityModel):
         probs /= probs.sum()
 
         t4 = time.perf_counter()
-        
+
         # Get cdf distribution of 90% most likely tokens
         ts1 = time.perf_counter()
         topk = np.argsort(-probs)
         ts2 = time.perf_counter()
-        
+
         tokens = np.zeros(self.N, dtype=np.int64)
         cdfs = np.zeros(self.N, dtype=np.float64)
 
@@ -76,9 +118,9 @@ class LlamaModel(ProbabilityModel):
         # Compute cumulative probabilities
         cum_probs = np.cumsum(probs_sorted)
         # Find cutoff index of top_p probability
-        cutoff_index = np.searchsorted(cum_probs, self.top_p, side='right')
+        cutoff_index = np.searchsorted(cum_probs, self.top_p, side="right")
         # Get slice of topk
-        topk_slice = topk[:cutoff_index+1]
+        topk_slice = topk[: cutoff_index + 1]
         n_topk = cutoff_index + 1
 
         tokens[:n_topk] = topk_slice
@@ -92,39 +134,42 @@ class LlamaModel(ProbabilityModel):
         n_remaining = len(remaining_tokens)
         if n_remaining > 0:
             uniform_prob = (1.0 - cum_probs[cutoff_index]) / n_remaining
-            tokens[n_topk:n_topk + n_remaining] = remaining_tokens
-            cdfs[n_topk:n_topk + n_remaining] = (
+            tokens[n_topk : n_topk + n_remaining] = remaining_tokens
+            cdfs[n_topk : n_topk + n_remaining] = (
                 uniform_prob * np.arange(1, n_remaining + 1) + cum_probs[cutoff_index]
             )
-        
+
         t5 = time.perf_counter()
-        
+
         # Cache new token
         self.cache.append(prior_symbols[-1])
 
         # returns sorted tokens and cdfs
         return (tokens, cdfs)
-    
-    def reset(self):
+
+    def reset(self) -> None:
+        """Clear cache and reset LLM. Needed when starting a new compression/decrompression"""
         self.cache = []
         self.llm.reset()
-        print("Cache cleared")
 
     def tokenize(self, text: bytes) -> list[int]:
+        """
+        Tokenize a string of bytes into a sequence of token IDs.
+
+        This function is a wrapper around Llama's `tokenize` method without adding the BOS token.
+
+        Parameters
+        ----------
+        text : bytes
+            The string of bytes to tokenize.
+
+        Returns
+        -------
+        list[int]
+            A list of token IDs.
+        """
+
         return self.llm.tokenize(text, add_bos=False)
 
     def detokenize(self, tokens: list[int]) -> bytes:
         return self.llm.detokenize(tokens)
-
-
-# Testing
-if __name__ == "__main__":
-    prompt = "The capital of France is".encode('utf-8')
-
-    model = LlamaModel()
-    prompt_tkn = model.tokenize(prompt)
-    tokens, cdfs = model.get_prob(prompt_tkn)
-    #print(tokens[0])
-    for i in range(10):
-        print(tokens[i])
-        print(model.detokenize([tokens[i]]), cdfs[i])
