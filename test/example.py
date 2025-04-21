@@ -10,11 +10,11 @@ wiki_str = "The building began as a movie theater in 1973, was converted into th
 encoded_str = wiki_str.encode("utf-8")
 # We tokenize the string using our model
 tokenized_str = np.asarray(model.tokenize(encoded_str))
-# Check how many symbols we have
+# Check how many symbols we have (35 symbols)
 print(len(tokenized_str), " symbols")
 
 # Encode the string using arithmetic coding
-# This yields high compression
+# This yields high compression it is encoded into 146 bits, which is around 4.2 bits per symbol in the input string.
 encoded_bin = encode(tokenized_str, model)
 print(len(encoded_bin), " bits in encoding")
 
